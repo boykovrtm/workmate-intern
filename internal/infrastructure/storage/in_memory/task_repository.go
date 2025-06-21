@@ -1,8 +1,8 @@
 package in_memory
 
 import (
-	"awesomeProject2/internal/domain/entities"
 	"errors"
+	"github.com/boykovrtm/workmate-intern/internal/domain/entities"
 	"github.com/google/uuid"
 	"sync"
 )

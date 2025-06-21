@@ -1,12 +1,12 @@
 package main
 
 import (
-	"awesomeProject2/internal/application/handlers"
-	"awesomeProject2/internal/application/interfaces"
-	"awesomeProject2/internal/facade"
-	"awesomeProject2/internal/infrastructure/storage/in_memory"
-	"awesomeProject2/internal/infrastructure/workers"
 	"context"
+	"github.com/boykovrtm/workmate-intern/internal/application/handlers"
+	"github.com/boykovrtm/workmate-intern/internal/application/interfaces"
+	"github.com/boykovrtm/workmate-intern/internal/facade"
+	"github.com/boykovrtm/workmate-intern/internal/infrastructure/storage/in_memory"
+	"github.com/boykovrtm/workmate-intern/internal/infrastructure/workers"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
 )

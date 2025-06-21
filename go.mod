@@ -1,4 +1,4 @@
-module awesomeProject2
+module github.com/boykovrtm/workmate-intern
 
 go 1.24.2
 

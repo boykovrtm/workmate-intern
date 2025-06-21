@@ -1,8 +1,8 @@
 package entities
 
 import (
-	"awesomeProject2/internal/application/interfaces"
 	"context"
+	"github.com/boykovrtm/workmate-intern/internal/application/interfaces"
 	"github.com/google/uuid"
 	"time"
 )

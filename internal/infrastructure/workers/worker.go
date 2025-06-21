@@ -1,8 +1,8 @@
 package workers
 
 import (
-	"awesomeProject2/internal/domain/entities"
 	"context"
+	"github.com/boykovrtm/workmate-intern/internal/domain/entities"
 	"github.com/sirupsen/logrus"
 	"time"
 )

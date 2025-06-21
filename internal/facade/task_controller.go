@@ -1,9 +1,8 @@
 package facade
 
 import (
-	"awesomeProject2/internal/application/interfaces"
-	"awesomeProject2/internal/domain/entities"
-	"awesomeProject2/internal/infrastructure/storage/in_memory"
+	"github.com/boykovrtm/workmate-intern/internal/application/interfaces"
+	"github.com/boykovrtm/workmate-intern/internal/domain/entities"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
@@ -11,33 +10,32 @@ import (
 )
 
 type TaskController struct {
-	storage    *in_memory.InMemoryTasksStorage
+	repository entities.TaskRepository
 	logger     *logrus.Logger
 	collection interfaces.HandlerCollection
 }
 
-func NewTaskController(webApp *fiber.App, storage *in_memory.InMemoryTasksStorage, logger *logrus.Logger, collection interfaces.HandlerCollection) {
+func NewTaskController(webApp *fiber.App, repository entities.TaskRepository, logger *logrus.Logger, collection interfaces.HandlerCollection) {
 	controller := &TaskController{
-		storage:    storage,
+		repository: repository,
 		logger:     logger,
 		collection: collection,
 	}
 
-	webApp.Post("/task", func(c *fiber.Ctx) error {
+	group := webApp.Group("api/v1/tasks")
+	group.Post("/", func(c *fiber.Ctx) error {
 		return controller.CreateTask(c)
 	})
 
-	webApp.Get("/task/:id", func(c *fiber.Ctx) error {
+	group.Get("/:id", func(c *fiber.Ctx) error {
 		return controller.GetTask(c)
 	})
 
-	webApp.Patch("/task/:id", func(c *fiber.Ctx) error {
+	group.Patch("/:id/retry", func(c *fiber.Ctx) error {
 		return controller.TryAgain(c)
 	})
 
-	webApp.Delete("/task/:id", func(c *fiber.Ctx) error {
-		return controller.DeleteTask(c)
-	})
+	group.Delete("/:id", controller.DeleteTask)
 }
 
 func (tc *TaskController) CreateTask(c *fiber.Ctx) error {
@@ -76,7 +74,7 @@ func (tc *TaskController) CreateTask(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err})
 	}
 
-	err = tc.storage.Save(task)
+	err = tc.repository.Save(task)
 	if err != nil {
 		tc.logger.WithFields(logrus.Fields{
 			"error":   err.Error(),
@@ -92,7 +90,18 @@ func (tc *TaskController) CreateTask(c *fiber.Ctx) error {
 }
 
 func (tc *TaskController) GetTask(c *fiber.Ctx) error {
-	task, err := tc.storage.Get(uuid.MustParse(c.Params("id")))
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		tc.logger.WithFields(logrus.Fields{
+			"error":   err.Error(),
+			"handler": "GetTask",
+			"method":  c.Method(),
+			"path":    c.Path(),
+		}).Error("Failed parse id")
+
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	task, err := tc.repository.Get(id)
 	if err != nil {
 		tc.logger.WithFields(logrus.Fields{
 			"error":   err.Error(),
@@ -108,7 +117,18 @@ func (tc *TaskController) GetTask(c *fiber.Ctx) error {
 }
 
 func (tc *TaskController) TryAgain(c *fiber.Ctx) error {
-	task, err := tc.storage.Get(uuid.MustParse(c.Params("id")))
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		tc.logger.WithFields(logrus.Fields{
+			"error":   err.Error(),
+			"handler": "TryAgain",
+			"method":  c.Method(),
+			"path":    c.Path(),
+		}).Error("Failed parse id")
+
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	task, err := tc.repository.Get(id)
 	if err != nil {
 		tc.logger.WithFields(logrus.Fields{
 			"error":   err.Error(),
@@ -125,7 +145,18 @@ func (tc *TaskController) TryAgain(c *fiber.Ctx) error {
 }
 
 func (tc *TaskController) DeleteTask(c *fiber.Ctx) error {
-	err := tc.storage.Delete(uuid.MustParse(c.Params("id")))
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		tc.logger.WithFields(logrus.Fields{
+			"error":   err.Error(),
+			"handler": "DeleteTask",
+			"method":  c.Method(),
+			"path":    c.Path(),
+		}).Error("Failed parse id")
+
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	err = tc.repository.Delete(id)
 	if err != nil {
 		tc.logger.WithFields(logrus.Fields{
 			"error":   err.Error(),
@@ -147,7 +178,10 @@ type CreateTaskRequest struct {
 type TaskView struct {
 	ID                 uuid.UUID           `json:"id"`
 	CreatedAt          time.Time           `json:"created"`
-	ProcessingDuration string              `json:"completingTime"`
+	TakenAt            time.Time           `json:"taken_at"`
+	CompletedAt        time.Time           `json:"completed_at"`
+	ProcessingDuration string              `json:"processing-duration"`
+	Payload            string              `json:"payload"`
 	Status             entities.TaskStatus `json:"status"`
 	Result             string              `json:"result"`
 }
@@ -156,7 +190,10 @@ func mapTask(task entities.Task) TaskView {
 	return TaskView{
 		ID:                 task.ID,
 		CreatedAt:          task.CreatedAt,
+		TakenAt:            task.TakenAt,
+		CompletedAt:        task.CompletedAt,
 		ProcessingDuration: task.ProcessingDuration().String(),
+		Payload:            task.Payload,
 		Status:             task.Status,
 		Result:             task.Result,
 	}
